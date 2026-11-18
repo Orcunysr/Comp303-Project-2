@@ -13,5 +13,8 @@ pip install -r requirements.txt
 ## Run
 
 ```bash
-python src/main.py
+python src/dijkstra.py      # Part 1: reads N (< 20), S, D
+python src/astar.py         # Part 2: reads N (< 20), S, D
+python src/experiments.py   # Items 3 & 6: N = 10 ... 2000, saves plots to figures/
+python src/draw_graph.py 10 # Draw the graph for N = 10
 ```
