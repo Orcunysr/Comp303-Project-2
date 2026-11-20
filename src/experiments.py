@@ -2,10 +2,12 @@
 
 Runs N = 10, 50, 100, 200, 500, 1000, 2000 with S = 1, D = N.
 Measured running time = total number of loop repetitions (all c_i = 1).
-Theoretical running time = (V + E) * log2(V), with V = N and E = 6N - 12.
+Theoretical running time (worst case, all c_i = 1), with V = N and E = 6N - 12:
+    init loop V + main loop (E + 1) + neighbor loop E + path loop V = 2V + 2E + 1
+Results are also written to output/results.csv.
 """
 
-import math
+import csv
 import os
 
 import matplotlib.pyplot as plt
@@ -15,12 +17,14 @@ from dijkstra import dijkstra
 from graph import build_graph
 
 N_VALUES = [10, 50, 100, 200, 500, 1000, 2000]
-OUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "figures"))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+OUT_DIR = os.path.join(ROOT, "figures")
+CSV_PATH = os.path.join(ROOT, "output", "results.csv")
 
 
 def theoretical(n):
     v, e = n, 6 * n - 12
-    return (v + e) * math.log2(v)
+    return 2 * v + 2 * e + 1
 
 
 def run():
@@ -45,19 +49,28 @@ def run():
 
 
 def print_table(rows):
-    header = f"{'N':>5} {'cost':>9} {'Dijkstra':>9} {'A*|j-i|':>9} {'A* cut':>9} {'exp|j-i|':>9} {'exp cut':>8} {'(V+E)logV':>10}"
+    header = (f"{'N':>5} {'cost':>9} {'Dijkstra':>9} {'A*|j-i|':>9} {'A* cut':>9} "
+              f"{'exp|j-i|':>9} {'exp cut':>8} {'2V+2E+1':>9} {'ratio':>6}")
     print(header)
     print("-" * len(header))
     for r in rows:
         print(f"{r['N']:>5} {r['cost']:>9} {r['dijkstra']:>9} {r['astar_abs']:>9} {r['astar_cut']:>9} "
-              f"{r['expanded_abs']:>9} {r['expanded_cut']:>8} {r['theory']:>10.0f}")
+              f"{r['expanded_abs']:>9} {r['expanded_cut']:>8} {r['theory']:>9} {r['dijkstra'] / r['theory']:>6.3f}")
+
+
+def save_csv(rows):
+    os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
+    with open(CSV_PATH, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 def plot(rows, key, label, filename):
     ns = [r["N"] for r in rows]
     fig, ax = plt.subplots(figsize=(7, 4.5))
     ax.plot(ns, [r[key] for r in rows], "o-", label=f"{label} (measured repetitions)")
-    ax.plot(ns, [r["theory"] for r in rows], "s--", label="Theoretical (V+E) log2 V")
+    ax.plot(ns, [r["theory"] for r in rows], "s--", label="Theoretical worst case 2V + 2E + 1")
     ax.set_xlabel("N (number of cities)")
     ax.set_ylabel("Running time (repetitions)")
     ax.set_title(f"{label}: measured vs theoretical")
@@ -88,6 +101,7 @@ if __name__ == "__main__":
     os.makedirs(OUT_DIR, exist_ok=True)
     rows = run()
     print_table(rows)
+    save_csv(rows)
     plot(rows, "dijkstra", "Dijkstra", "dijkstra_runtime.png")
     plot(rows, "astar_abs", "A* (h = |j - i|)", "astar_runtime.png")
     plot_comparison(rows)
